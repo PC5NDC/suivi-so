@@ -1,6 +1,20 @@
+
 import streamlit as st
 
-st.title("🎈 My new app")
+st.set_page_config(
+    page_title="Contrôle Solustop",
+    page_icon="📊",
+    layout="wide"
+)
+
+st.title("Contrôle de planification Solustop")
+
 st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
+    "Application de comparaison entre les données "
+    "Solustop et le fichier de planification."
+)
+
+st.info(
+    "Bienvenue. Les fonctionnalités de comparaison "
+    "seront ajoutées progressivement."
 )
