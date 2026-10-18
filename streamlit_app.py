@@ -1,164 +1,78 @@
 
 import streamlit as st
+import pandas as pd
 from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 
-# Configuration
-st.set_page_config(
-    page_title="Contrôle Solustop",
-    page_icon="📊",
-    layout="wide"
-)
-
-# Fuseau horaire utilisé pour les saisies
-PARIS = ZoneInfo("Europe/Paris")
-maintenant = datetime.now(PARIS)
-
-# Valeurs initiales des champs
-if "date_debut" not in st.session_state:
-    st.session_state.date_debut = maintenant.date()
-
-if "heure_debut" not in st.session_state:
-    st.session_state.heure_debut = maintenant.time().replace(
-        second=0, microsecond=0
-    )
-
-if "date_fin" not in st.session_state:
-    st.session_state.date_fin = maintenant.date()
-
-if "heure_fin" not in st.session_state:
-    st.session_state.heure_fin = maintenant.time().replace(
-        second=0, microsecond=0
-    )
-
-
-# Action du bouton Actuel
-def renseigner_maintenant():
-    instant = datetime.now(PARIS)
-    st.session_state.date_fin = instant.date()
-    st.session_state.heure_fin = instant.time().replace(
-        second=0, microsecond=0
-    )
-
-
-# Conversion en timestamp Unix UTC, en millisecondes
-def convertir_timestamp(jour, heure):
-    date_heure = datetime.combine(
-        jour, heure
-    ).replace(tzinfo=PARIS)
-
-    timestamp_ms = int(date_heure.timestamp() * 1000)
-
-    date_utc = date_heure.astimezone(ZoneInfo("UTC"))
-
-    return timestamp_ms, date_utc.strftime(
-        "%Y-%m-%d %H:%M:%S UTC"
-    )
-
-
-# Interface
+st.set_page_config(page_title="Contrôle de planification Solustop", layout="wide")
 st.title("Contrôle de planification Solustop")
 
-st.write(
-    "Paramétrez la période à analyser. "
-    "Les dates et heures saisies sont exprimées en heure française."
-)
+paris = ZoneInfo("Europe/Paris")
 
-st.divider()
+if "date_debut" not in st.session_state:
+    st.session_state.date_debut = date(2026, 5, 23)
+if "heure_debut" not in st.session_state:
+    st.session_state.heure_debut = time(0, 0)
+if "date_fin" not in st.session_state:
+    st.session_state.date_fin = date(2026, 5, 25)
+if "heure_fin" not in st.session_state:
+    st.session_state.heure_fin = time(20, 0)
 
-st.header("1. Période de recherche")
+def afficher_actuel():
+    maintenant = datetime.now(paris)
+    st.session_state.date_fin = maintenant.date()
+    st.session_state.heure_fin = maintenant.time().replace(second=0, microsecond=0)
 
-# Début
-col_date_debut, col_heure_debut = st.columns(2)
+st.subheader("Période de contrôle")
+col1, col2 = st.columns(2)
 
-with col_date_debut:
-    st.date_input(
-        "Date de début",
-        key="date_debut",
-        format="DD/MM/YYYY"
-    )
+with col1:
+    st.date_input("Date de début", key="date_debut")
+    st.time_input("Heure de début", key="heure_debut")
 
-with col_heure_debut:
-    st.time_input(
-        "Heure de début",
-        key="heure_debut",
-        step=60
-    )
+with col2:
+    st.date_input("Date de fin", key="date_fin")
+    st.time_input("Heure de fin", key="heure_fin")
+    st.button("Actuel", on_click=afficher_actuel)
 
-# Fin et bouton Actuel
-col_date_fin, col_heure_fin, col_actuel = st.columns(
-    [1, 1, 0.55],
-    vertical_alignment="bottom"
-)
-
-with col_date_fin:
-    st.date_input(
-        "Date de fin",
-        key="date_fin",
-        format="DD/MM/YYYY"
-    )
-
-with col_heure_fin:
-    st.time_input(
-        "Heure de fin",
-        key="heure_fin",
-        step=60
-    )
-
-with col_actuel:
-    st.button(
-        "Actuel",
-        on_click=renseigner_maintenant,
-        use_container_width=True
-    )
-
-# Calcul des timestamps
-ts_debut, utc_debut = convertir_timestamp(
+debut = datetime.combine(
     st.session_state.date_debut,
-    st.session_state.heure_debut
+    st.session_state.heure_debut,
+    tzinfo=paris,
 )
-
-ts_fin, utc_fin = convertir_timestamp(
+fin = datetime.combine(
     st.session_state.date_fin,
-    st.session_state.heure_fin
+    st.session_state.heure_fin,
+    tzinfo=paris,
 )
 
-st.subheader("Timestamps UTC")
-
-st.caption(
-    "Calcul automatique en lecture seule — "
-    "timestamps Unix en millisecondes."
-)
-
-col_ts_debut, col_ts_fin = st.columns(2)
-
-with col_ts_debut:
-    st.text_input(
-        "Début — timestamp UTC (ms)",
-        value=str(ts_debut),
-        disabled=True
-    )
-    st.caption(f"Date UTC : {utc_debut}")
-
-with col_ts_fin:
-    st.text_input(
-        "Fin — timestamp UTC (ms)",
-        value=str(ts_fin),
-        disabled=True
-    )
-    st.caption(f"Date UTC : {utc_fin}")
-
-if ts_fin < ts_debut:
-    st.error(
-        "La date et l'heure de fin doivent être "
-        "postérieures ou égales au début."
-    )
+col1, col2 = st.columns(2)
+with col1:
+    st.caption("Timestamp UTC de début (ms)")
+    st.code(str(int(debut.timestamp() * 1000)))
+with col2:
+    st.caption("Timestamp UTC de fin (ms)")
+    st.code(str(int(fin.timestamp() * 1000)))
 
 st.divider()
+st.subheader("Import du fichier de planification")
 
-st.header("2. Données Solustop")
-
-st.info(
-    "La connexion à l'API Solustop sera ajoutée "
-    "dans une prochaine étape."
+fichier = st.file_uploader(
+    "Sélectionnez une copie Excel (.xlsx ou .xlsm)",
+    type=["xlsx", "xlsm"],
 )
+
+if fichier is not None:
+    try:
+        classeur = pd.ExcelFile(fichier)
+        feuilles = classeur.sheet_names
+        st.success(f"Fichier chargé : {fichier.name}")
+        st.write(f"{len(feuilles)} feuilles détectées.")
+
+        feuille = st.selectbox("Feuille à consulter", feuilles)
+        donnees = pd.read_excel(classeur, sheet_name=feuille)
+        st.write(f"{len(donnees)} lignes et {len(donnees.columns)} colonnes")
+        st.dataframe(donnees, use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Impossible de lire ce fichier : {e}")
